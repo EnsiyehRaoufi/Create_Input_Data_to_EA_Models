@@ -8,7 +8,7 @@ ALIGN_FILE = "refDHT.rdf" #Name of the file containing reference alignment
 ALIGN_FORMAT = 'xml' #Format of the reference alignment file, could be ttl, xml or nt.
 
 #Info about building the dictionary for BERT-INT model
-DICT_NAME = '2024-02-12-doremus' #Name of the dictionary that we plan to feed to BERT-INT model
+DICT_NAME = 'desc_doremus' #Name of the dictionary that we plan to feed to BERT-INT model
 TEST_REF_SIZE = 0.7 #Percentage of the reference alignment to be used for test set
 HANDL_BLANK_NODE = 1 		
 #0/1, if 0: all blank nodes will be removed from the attribute/relation triple files,

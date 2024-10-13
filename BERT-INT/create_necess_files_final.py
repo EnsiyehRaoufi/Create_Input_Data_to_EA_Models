@@ -36,6 +36,7 @@ def create_att_rel_triples_files(data_path):
     fname = fname.split('_')[0]
     with open(BERT_INT_INPUT_PATH+fname+'_att_triples', 'w') as f:
         for p in att_triples:
+            p = p.replace('\t', ' ')
             f.write(p)
 
     path = data_path.rpartition('/')[0]
@@ -92,16 +93,16 @@ def create_ref_align():
             ent_url = ent_url.strip()
             ent_dict_2[ent_url] = str(ent_id)
 
-    pair_ent_ids = []
+    pair_ent_ids = {}
     with open("./raw_files/same_as", "r") as f:
-            for line in f.readlines():
-                ent1, ent2 = line.split()
-                if ent1 in ent_dict_1:
-                    pair_ent_ids.append(ent_dict_1[ent1]+'\t'+ent_dict_2[ent2])
-
+        for line in f.readlines():
+            ent1, ent2 = line.split()
+            if ent1 in ent_dict_1:
+                pair_ent_ids[ent_dict_1[ent1]] = ent_dict_2[ent2]
+    print("Number of aligned entities: ", len(pair_ent_ids))
     with open('./raw_files/ref_align', 'w') as f:
-        for p in pair_ent_ids:
-            f.write(p+'\n')
+        for k, v in pair_ent_ids.items():
+            f.write(k+'\t'+v+'\n')
 
 def create_sup_ref_pairs(fname):
     """Create train (for supervised learning) and test files by splitting the
@@ -280,6 +281,47 @@ def create_description_dict_pick_file():
         pickle.dump(desc_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     print("{} was created!".format(DICT_NAME))
 
+def cleanse_data():
+    """Set delimiters in attribute/relation triples and the reference alignment
+    files to be tab(\t)
+    """
+    fpairs = ['ref_ent_ids', 'ref_pairs', 'sup_pairs']
+    for fp in fpairs:
+        with open(BERT_INT_INPUT_PATH+fp, "r") as f:
+            flag = True
+            modified_ref = []
+            for line in f.readlines():
+                ll = line.rstrip('\n').split(' ')
+                if len(ll)!=2:
+                    flag = False
+                    break
+                else:
+                    h, t = ll
+                    modified_ref.append((h,t))
+            if flag:
+                with open(BERT_INT_INPUT_PATH+fp, "w") as f:
+                    for tup in modified_ref:
+                        f.write(tup[0]+'\t'+tup[1]+'\n')
+    prefix = [DATASET, 'en']
+    for i in range(2):
+
+        with open(BERT_INT_INPUT_PATH+'triples_'+str(i+1), "r") as f:
+            modified_tri = []
+            for line in f.readlines():
+                ll = line.rstrip('\n').split(' ',2)
+                if len(ll)==3:
+                    h, r, t = ll
+                    h = h.strip('<>')
+                    r = r.strip('<>')
+                    t = t.strip('<>')
+                    t = t.rstrip('> .')
+                    modified_tri.append((h,r,t))
+            if len(ll)==3:
+                with open(BERT_INT_INPUT_PATH+'triples_'+str(i+1), "w") as f:
+                    for tri in modified_tri:
+                        f.write(tri[0]+'\t'+tri[1]+'\t'+tri[2]+'\n')
+
+
 if __name__ == '__main__':
 
     PATH_DATA = './raw_files/'+DATASET
@@ -316,5 +358,8 @@ if __name__ == '__main__':
 
     print("----------------create description dictionary file--------------------")
     create_description_dict_pick_file()
+
+    cleanse_data()
+
     sys.stdout = orig_stdout
     f.close()

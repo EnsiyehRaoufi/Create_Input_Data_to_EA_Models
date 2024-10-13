@@ -104,7 +104,18 @@ def create_ref_align():
     with open('./raw_files/ref_align', 'w') as f:
         for p in pair_ent_ids:
             f.write(p+'\n')
-
+            
+    pair_ent_ids = {}
+    with open("./raw_files/same_as", "r") as f:
+        for line in f.readlines():
+            ent1, ent2 = line.split()
+            if ent1 in ent_dict_1:
+                pair_ent_ids[ent1] = ent2
+    print("Number of aligned entities: ", len(pair_ent_ids))
+    with open('./raw_files/ref_align2', 'w') as f:
+        for k, v in pair_ent_ids.items():
+            f.write(k+'\t'+v+'\n')
+            
 def create_rel_ids_files(fname):
     """Create files assigning unique IDs to relation properties in each KG.
     """
@@ -161,7 +172,7 @@ if __name__ == '__main__':
     os.rename(PATH+DATASET+'_rel_triples', INPUT_DIR+'rel_triples_1')
     os.rename(PATH+'en_rel_triples', INPUT_DIR+'rel_triples_2')
     #print("-------Copying reference alignment file to MultiKE Input------------")
-    os.rename(PATH+'same_as', INPUT_DIR+'ent_links')
+    os.rename(PATH+'ref_align2', INPUT_DIR+'ent_links')
   
     #print("-------Renaming triple files to MultiKE Input------------")
     os.rename(INPUT_DIR+DATASET+'_att_triples', INPUT_DIR+'attr_triples_1')

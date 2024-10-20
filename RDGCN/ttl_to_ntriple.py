@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 if len(ent_pairs_1[ent1])>1:
                     print("More than 1 member existed in ent_pairs_1 for this entity: ", ent1)
 
-    print("Number of aligned entities: ", len(pairs_list))
+    #print("Number of aligned entities: ", len(pairs_list))
     with open(fname, 'w') as f:
         for pair in pairs_list:
             f.write(pair[0].lower()+" "+pair[1].lower()+'\n')

@@ -3,9 +3,10 @@ from Param import *
 import json
 import time
 import string
+from cls_generator import *
 
 def loadGloveModel(gloveFile):
-    print("Loading Glove Model...")
+    print("Loading word embedding Model...")
     f = open(gloveFile,'r', encoding='utf8')
     model = {}
     for line in f:
@@ -123,31 +124,36 @@ def uniq_relation():
 
 if __name__ == '__main__':
     start = time.time()
-    uniq_relation()
-    initial_emb_model = loadGloveModel(PRETRAINED_TEXT_EMB_MODEL)
+    uniq_relation()    
     ent_name_dict = get_ent_names() #dictionary of all entity names
     ent_ids =  list(ent_name_dict.keys())
     ent_names = [ent_name_dict[id] for id in ent_ids]
     ent_vectors = [] #list of entity initial vectors
     count = 0
-    for name in ent_names:
-        flag = False
-        emb = []
-        words = name.split()
-        for word in words:
-            if word in initial_emb_model.keys():
-                flag = True
-                n_vec = initial_emb_model[word].tolist()
-                if not emb:
-                    emb = n_vec.copy()
-                else:
-                    emb = [(x + y)/2 for x, y in zip(emb, n_vec)]
-        if flag:
-            ent_vectors.append(emb)
-        else:
-            count +=1
-            ent_vectors.append(rand_vec_generat())
-    print("{} vectors given from {} model, and {} random vectors generated!".format(len(ent_names)-count, PRETRAINED_TEXT_EMB_MODEL, count))
+    if PRETRAINED_TEXT_EMB_MODEL=='glove.840B.300d.txt' or PRETRAINED_TEXT_EMB_MODEL=='wiki-news-300d-1M.vec':
+        initial_emb_model = loadGloveModel(PRETRAINED_TEXT_EMB_MODEL)
+        for name in ent_names:
+            flag = False
+            emb = []
+            words = name.split()
+            for word in words:
+                if word in initial_emb_model.keys():
+                    flag = True
+                    n_vec = initial_emb_model[word].tolist()
+                    if not emb:
+                        emb = n_vec.copy()
+                    else:
+                        emb = [(x + y)/2 for x, y in zip(emb, n_vec)]
+            if flag:
+                ent_vectors.append(emb)
+            else:
+                count +=1
+                ent_vectors.append(rand_vec_generat())
+        print("{} vectors given from {} model, and {} random vectors generated!".format(len(ent_names)-count, PRETRAINED_TEXT_EMB_MODEL, count))
+    if PRETRAINED_TEXT_EMB_MODEL=='bert-base-multilingual-cased':
+        ent_vectors = get_cls_embeddings(ent_names)
+
+
     with open(INPUT_DIR+DATASET+'_vectorList.json', 'w') as f:
         json.dump(ent_vectors, f)
     print("Runtime: ", time.time()-start)

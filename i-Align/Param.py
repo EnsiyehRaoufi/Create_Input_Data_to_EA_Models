@@ -1,10 +1,22 @@
+# Source and Target KG file names (placed in the input folder)
+KG_FILES = ["source.nt", "target.nt"]  # Filenames for source and target KGs
 
-#Info about the source, target and reference alignment files
-KG_FILES = ["source.nt", "target.nt"] #source and target kg file names
-KG_FORMAT = 'nt' #Format of the input file, could be ttl, xml, nt.
-DATASET = 'Doremus' #Dataset name should not contain any punctuations
-ALIGN_FILE = "refDHT.rdf" #Name of the file containing reference alignment e.g. refDHT.rdf or same_as.ttl
-ALIGN_FORMAT = 'xml' #Format of the reference alignment file, could be ttl, xml or nt.
-INPUT_DIR = './iAlign_inputs/'+DATASET+'/' #Directory to the output of the codes, NO NEED TO CHANGE
-PATH = './raw_files/' #Path to raw files
+# Format of the KG files: choose one of 'nt', 'ttl', or 'xml'
+KG_FORMAT = 'nt'
 
+# Dataset name (used to name output folders and files)
+# ⚠️ Avoid special characters or spaces
+DATASET = 'Doremus'
+
+# File name of the reference alignment (sameAs links)
+ALIGN_FILE = "refDHT.rdf"
+
+# Format of the reference alignment file: choose one of 'nt', 'ttl', or 'xml'
+ALIGN_FORMAT = 'xml'
+
+# Output directory for generated i-Align input files (auto-computed)
+INPUT_DIR = './iAlign_inputs/' + DATASET + '/'  # No need to manually edit this
+
+# Path to the folder containing your RDF and alignment files
+# 📁 Default is './raw_files/', but you may set it to any folder you prefer
+PATH = './raw_files/'

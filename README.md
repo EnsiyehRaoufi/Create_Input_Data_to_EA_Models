@@ -64,7 +64,7 @@ The output of this tool consists of **model-specific input files** generated fro
 The generated files vary depending on the selected EA model (defined in `param.py`).
 
 ### Example: BERT-INT Input Files
-The following 11 files are produced when preparing data for the BERT-INT model:
+The following 11 files are produced when preparing Zh-En data for the BERT-INT model:
 
 - `ent_ids_1`: Entity IDs and URIs in source KG
 - `ent_ids_2`: Entity IDs and URIs in target KG

@@ -70,7 +70,7 @@ With this flexible parameter setup, your pipeline can prepare standardized input
 
 
 
-## 📌 ## 📌 Summary: Comparison of our Analysis Pipeline with the Entity‑Matchers Framework
+## 📌 Summary: Comparison of our Analysis Pipeline with the Entity‑Matchers Framework
 
 This tool complements the [Entity‑Matchers](https://github.com/epfl-dlab/entity-matchers) framework by adding a **missing capability**: converting raw RDF files (`.ttl`, `.nt`, `.xml`) and reference alignments into the standardized input format expected by their framework.
 

@@ -1,5 +1,8 @@
 # Create Input Files to the Entity Alignment Models from TTL/XML/NT Source and Target KGs
 
+📢 **Note**: The results of this work contributed to a Semantic Web Journal submission, available here:  
+[An Analysis of the Performance of Representation Learning Methods for Entity Alignment: Benchmark vs. Real-world Data](https://www.semantic-web-journal.net/content/analysis-performance-representation-learning-methods-entity-alignment-benchmark-vs-real-0)
+
 This repository creates proper input files for various Entity Alignment (EA) models using reference alignment files and RDF-based source and target knowledge graphs in `.ttl`, `.xml`, or `.nt` formats.
 
 Please note: the generated inputs are formatted to allow EA models to run on a wide variety of datasets without causing runtime errors, even on real-world and heterogeneous KGs.

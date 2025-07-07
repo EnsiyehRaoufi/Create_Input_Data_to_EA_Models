@@ -1,3 +1,10 @@
+"""
+Convert Turtle RDF files to N-Triples, strip out blank-node triples,
+and generate same_as alignments.  
+Outputs cleaned triple files and a final alignment file,
+while reporting total execution time.
+"""
+
 from rdflib import Graph
 from collections import defaultdict
 from Param import *
@@ -7,13 +14,17 @@ import os
 if __name__ == '__main__':
     """Read turtle files and save them in ntriples format. read reference alignment file and
      save the aligned entities in a file named same_as"""
-    start_time = time.time()
+    # Start overall execution timer
+    start_time = time.time() 
     RAW_FILE_DIR = "./raw_files/"
     OUTPUT_NAMES = [DATASET+"_triples", "en_triples"]
     not_blank_lines = [[],[]]
+
+    # Loop over configured KG files: parse, serialize, and clean blank nodes
     for i in range(2):
         g = Graph()
         f = RAW_FILE_DIR+KG_FILES[i]
+        # Load data into RDFLib graph
         g.parse(f, format=KG_FORMAT)
         fname = OUTPUT_NAMES[i]
         g.serialize(destination= RAW_FILE_DIR+fname, format="nt")
@@ -21,16 +32,21 @@ if __name__ == '__main__':
         with open(RAW_FILE_DIR+fname, "r") as f:
             for line in f.readlines():
                 line = line.rstrip('\n')
+                # Skip any triple containing a blank-node identifier
                 if "_:" not in line:
                     not_blank_lines[i].append(line.lower())
+        # Overwrite with only non-blank-node, lowercase triples
         with open(RAW_FILE_DIR+fname, 'w') as f:
             for nb in not_blank_lines[i]:
                 f.write(nb+"\n")
+    # Load alignment data into graph 
     g = Graph()
     g.parse(RAW_FILE_DIR+ALIGN_FILE, format=ALIGN_FORMAT)
     fname = RAW_FILE_DIR+"same_as"
+    # Export raw alignment triples for post-processing 
     g.serialize(destination=fname+"_raw", format="nt")
 
+    # Extract owl:sameAs pairs directly from TTL triples
     if ALIGN_FORMAT == 'ttl':
         with open(fname+"_raw", "r") as f:
 
@@ -58,6 +74,7 @@ if __name__ == '__main__':
                     t = t.strip('<>')
                     t = t.strip('> .')
                     ent_pairs_2[l[0]].append(t)
+        # Prepare final list of (source, target) URI pairs
         pairs_list = []
         for ent1 in ent_pairs_1.keys():
             if ent1 in ent_pairs_2.keys():
@@ -69,8 +86,11 @@ if __name__ == '__main__':
                     print("More than 1 member existed in ent_pairs_1 for this entity: ", ent1)
 
     #print("Number of aligned entities: ", len(pairs_list))
+    # Write lowercase same_as pairs to output file
     with open(fname, 'w') as f:
         for pair in pairs_list:
             f.write(pair[0].lower()+" "+pair[1].lower()+'\n')
+    # Clean up temporary raw alignment file
     os.remove(fname+"_raw")
+    # Report total runtime to console
     print("--- Runtime: %s seconds ---" % (time.time() - start_time))

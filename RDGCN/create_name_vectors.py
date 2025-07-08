@@ -1,3 +1,11 @@
+"""
+Generate initial entity name vectors by:
+1) Normalizing URIs to human-readable names
+2) Loading pre-trained GloVe embeddings or generating random vectors
+3) Falling back to BERT CLS embeddings if specified
+Outputs a JSON list of vectors.
+"""
+
 import numpy as np
 from Param import *
 import json
@@ -6,6 +14,16 @@ import string
 from cls_generator import *
 
 def loadGloveModel(gloveFile):
+    """
+    Load GloVe embeddings from a text file into a word→vector dict.
+    
+    Args:
+        gloveFile (str): Path to GloVe .txt embeddings.
+    
+    Returns:
+        dict: word (str) → np.ndarray of floats.
+    """
+
     print("Loading word embedding Model...")
     f = open(gloveFile,'r', encoding='utf8')
     model = {}
@@ -20,6 +38,13 @@ def loadGloveModel(gloveFile):
     return model
 
 def get_name(uri):
+    """
+    Extract a clean, human-readable name from a URI.
+    
+    Replaces punctuation with spaces and collapses multiple segments.
+    """
+    
+    # Strip URI path to get the final segment as base name
     ent_name = uri.split(r"/")[-1]
     for punctuation in string.punctuation:
         ent_name = ent_name.replace(punctuation, ' ')
@@ -50,6 +75,16 @@ def rand_vec_generat(DIM=300):
     return(list(np.random.uniform(-1, 1, DIM)).copy())
 
 def uniq_rel(fnames):
+    """
+    Collect and sort unique relation IDs from multiple triple files.
+    
+    Args:
+        fnames (list[str]): filenames of tab-delimited triples.
+    
+    Returns:
+        list[str]: sorted unique relation IDs as strings.
+    """
+
     triple_list = []
     for fname in fnames:
         with open(INPUT_DIR+fname, 'r') as f:
@@ -69,6 +104,17 @@ def uniq_rel(fnames):
 
 
 def substitude(fname, uniq_rel_dict):
+    """
+    Replace relation IDs in a triples file using a provided mapping.
+    
+    Args:
+        fname (str): filename of the triples to update.
+        uniq_rel_dict (dict): oldID (str) → newID (str) mapping.
+    
+    Returns:
+        list[list[str]]: updated tab-split lines.
+    """
+
     changed_lines = []
     with open(INPUT_DIR+fname, 'r') as f:
         lines = f.readlines()
@@ -79,6 +125,13 @@ def substitude(fname, uniq_rel_dict):
     return changed_lines.copy()
 
 def cheq_continu():
+    """
+    Verify that relation IDs across both KG triples are continuous from 0 to max.
+    
+    Returns:
+        bool: True if IDs form an unbroken range, False otherwise.
+    """
+
     l = 0
     uniq_list = {}
     for i in range(2):
@@ -100,6 +153,7 @@ def cheq_continu():
 def uniq_relation():
     """Checks and modifies relation ids in kg1 and kg2 to be unique, continuous and starts from zero
     """
+    # Only proceed if IDs are not already unique & continuous
     if not cheq_continu():
         print("There is necessary for RDGCN model that relation ids in kg1 and kg2 \
         to be unique, continuous and starts from zero. Working on relations ids...")
@@ -123,6 +177,7 @@ def uniq_relation():
 
 
 if __name__ == '__main__':
+    # Normalize relation IDs, extract names, build vectors, and save to JSON
     start = time.time()
     uniq_relation()    
     ent_name_dict = get_ent_names() #dictionary of all entity names
@@ -152,8 +207,8 @@ if __name__ == '__main__':
         print("{} vectors given from {} model, and {} random vectors generated!".format(len(ent_names)-count, PRETRAINED_TEXT_EMB_MODEL, count))
     if PRETRAINED_TEXT_EMB_MODEL=='bert-base-multilingual-cased':
         ent_vectors = get_cls_embeddings(ent_names)
-
-
+        
+    # Serialize final entity vectors to JSON
     with open(INPUT_DIR+DATASET+'_vectorList.json', 'w') as f:
         json.dump(ent_vectors, f)
     print("Runtime: ", time.time()-start)

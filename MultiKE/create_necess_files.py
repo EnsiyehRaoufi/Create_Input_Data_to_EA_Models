@@ -9,7 +9,7 @@ from Param import *
 import sys
 orig_stdout = sys.stdout
 f = open('out.txt', 'w')
-sys.stdout = f
+sys.stdout = f # Redirect standard output to out.txt for logging
 
 # Check if the directory already exists
 if not os.path.exists(INPUT_DIR):
@@ -21,6 +21,7 @@ def create_att_rel_triples_files(data_path):
     """Creates 4 distinct file (2 for each KG), _att_triples files contain
     attribute triples of the KGs while _rel_triples files contain relation triples.
     """
+    # Initialize lists for attribute and relation triples
     att_triples = []
     rel_triples = []
     with open(data_path,"r",encoding="utf-8") as f:
@@ -49,6 +50,7 @@ def create_ent_id_files(fname):
     """Creates 2 files (1 for each KG) containing the KG entities, each of which
     assigned a unique ID.
     """
+    # Assign unique integer IDs to each entity URI in both KG files
     count = 0
     for i in range(2):
         ent_dict = {}
@@ -78,6 +80,7 @@ def create_ent_id_files(fname):
 def create_ref_align():
     """Creates reference alignment file based on the unique IDs of entities.
     """
+    # Map original entity URIs to integer IDs to build reference alignment
     ent_dict_1 = {}
     with open(PATH+"ent_ids_1", "r") as f:
         for line in f.readlines():
@@ -119,6 +122,7 @@ def create_ref_align():
 def create_rel_ids_files(fname):
     """Create files assigning unique IDs to relation properties in each KG.
     """
+    # Assign unique integer IDs to each relation predicate in both KG files
     rel_dict1 = {}
     count = 0
     with open(fname[0], "r") as f:
@@ -148,7 +152,8 @@ def create_rel_ids_files(fname):
             f.write(rel_dict2[key]+"\t"+key+"\n")
 
 if __name__ == '__main__':
-
+    # Execute full data‐preparation pipeline: split triples, assign IDs, build alignments
+    
     print("----------------create attribute and relation triples files--------------------")
     for fname in [PATH_DATA+'_triples', PATH+'en_triples']:
         create_att_rel_triples_files(fname)

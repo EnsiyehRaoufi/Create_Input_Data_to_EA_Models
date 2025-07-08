@@ -10,6 +10,7 @@ import sys
 orig_stdout = sys.stdout
 f = open('out.txt', 'w')
 sys.stdout = f
+# Redirect console output to out.txt for logging results
 BERT_INT_INPUT_PATH = './bert_int_inputs/'+DATASET+'_en/'
 
 # Check if the directory already exists
@@ -20,6 +21,7 @@ def create_att_rel_triples_files(data_path):
     """Creates 4 distinct file (2 for each KG), _att_triples files contain
     attribute triples of the KGs while _rel_triples files contain relation triples.
     """
+    # Split each line into attribute vs. relation triples
     att_triples = []
     rel_triples = []
     with open(data_path,"r",encoding="utf-8") as f:
@@ -48,6 +50,7 @@ def create_ent_id_files(fname):
     """Creates 2 files (1 for each KG) containing the KG entities, each of which
     assigned a unique ID.
     """
+    # Assign a unique integer ID to every entity URI
     count = 0
     for i in range(2):
         ent_dict = {}
@@ -77,6 +80,7 @@ def create_ent_id_files(fname):
 def create_ref_align():
     """Creates reference alignment file based on the unique IDs of entities.
     """
+    # Map same_as URIs to their integer IDs to build reference alignment
     ent_dict_1 = {}
     with open(BERT_INT_INPUT_PATH+"ent_ids_1", "r") as f:
         for line in f.readlines():
@@ -108,6 +112,7 @@ def create_sup_ref_pairs(fname):
     """Create train (for supervised learning) and test files by splitting the
     reference alignment
     """
+    # Split reference alignments into train and test sets
     pairs_list = []
     with open(fname, "r") as f:
         for line in f.readlines():
@@ -126,6 +131,7 @@ def create_sup_ref_pairs(fname):
 def create_rel_ids_files(fname):
     """Create files assigning unique IDs to relation properties in each KG.
     """
+    # Assign unique IDs to each relation predicate
     rel_dict1 = {}
     count = 0
     with open(fname[0], "r") as f:
@@ -157,6 +163,7 @@ def create_rel_ids_files(fname):
 def create_id_triples(fname):
     """Create 2 files (1 for each KG) containing relation triples shown by IDs.
     """
+    # Convert head/relation/tail URIs into their integer IDs
     for i in [1,2]:
         ent_dict = {}
         with open(BERT_INT_INPUT_PATH+"ent_ids_"+str(i), "r") as f:
@@ -195,6 +202,7 @@ def create_description_dict_pick_file():
     OR if HANDL_BLANK_NODE set to be True, it "Add desciption of blank nodes to
     the nodes that has relation with".
     """
+    # Aggregate all text attributes per entity into a Python dict
     desc_dict = {}
     fnames = [DATASET+'_att_triples', 'en_att_triples']
     if HANDL_BLANK_NODE==0:
@@ -285,6 +293,7 @@ def cleanse_data():
     """Set delimiters in attribute/relation triples and the reference alignment
     files to be tab(\t)
     """
+    # Convert space-delimited files into tab-delimited format
     fpairs = ['ref_ent_ids', 'ref_pairs', 'sup_pairs']
     for fp in fpairs:
         with open(BERT_INT_INPUT_PATH+fp, "r") as f:
@@ -323,7 +332,7 @@ def cleanse_data():
 
 
 if __name__ == '__main__':
-
+    # Build all intermediate files and cleanup, in sequence
     PATH_DATA = './raw_files/'+DATASET
     PATH = './raw_files/'
     print("----------------create attribute and relation triples files--------------------")

@@ -1,3 +1,8 @@
+"""
+ Convert Turtle RDF files to N-Triples, remove blank-node triples,
+ and generate a same_as alignment file. Reports total runtime.
+ """
+
 from rdflib import Graph
 from collections import defaultdict
 from Param import *
@@ -7,17 +12,22 @@ import os
 if __name__ == '__main__':
     """Read turtle files and save them in ntriples format. read reference alignment file and
      save the aligned entities in a file named same_as"""
+
+    # Start timer for script execution    
     start_time = time.time()
     RAW_FILE_DIR = "./raw_files/"
     OUTPUT_NAMES = [DATASET+"_triples", "en_triples"]
     not_blank_lines = [[],[]]
+    # Iterate over each KG file: parse, serialize, and clean blank nodes
     for i in range(2):
         g = Graph()
         f = RAW_FILE_DIR+KG_FILES[i]
+        # Parse the input file into RDFLib graph
         g.parse(f, format=KG_FORMAT)
         fname = OUTPUT_NAMES[i]
+        # Serialize graph to N-Triples format
         g.serialize(destination= RAW_FILE_DIR+fname, format="nt")
-        #Remove blank nodes
+        # Filter out any triples containing blank-node IDs and lowercase each
         with open(RAW_FILE_DIR+fname, "r") as f:
             for line in f.readlines():
                 line = line.rstrip('\n')
@@ -26,11 +36,15 @@ if __name__ == '__main__':
         with open(RAW_FILE_DIR+fname, 'w') as f:
             for nb in not_blank_lines[i]:
                 f.write(nb+"\n")
+                
+    # Parse reference alignment file (TTL or XML) into a new RDFLib graph
     g = Graph()
     g.parse(RAW_FILE_DIR+ALIGN_FILE, format=ALIGN_FORMAT)
     fname = RAW_FILE_DIR+"same_as"
+    # Serialize raw same_as triples for post-processing
     g.serialize(destination=fname+"_raw", format="nt")
 
+    # Extract owl:sameAs pairs from TTL
     if ALIGN_FORMAT == 'ttl':
         with open(fname+"_raw", "r") as f:
 
@@ -43,6 +57,8 @@ if __name__ == '__main__':
                 t = t.strip('<>')
                 t = t.strip('> .')
                 pairs_list.append((t,h))
+
+    # Group blank-node entity1/entity2 URIs for XML
     elif ALIGN_FORMAT == 'xml':
         ent_pairs_1 = defaultdict(list)
         ent_pairs_2 = defaultdict(list)
@@ -69,8 +85,11 @@ if __name__ == '__main__':
                     print("More than 1 member existed in ent_pairs_1 for this entity: ", ent1)
 
     #print("Number of aligned entities: ", len(pairs_list))
+    # Write cleaned same_as URI pairs (lowercased)
     with open(fname, 'w') as f:
         for pair in pairs_list:
             f.write(pair[0].lower()+" "+pair[1].lower()+'\n')
+    # Remove temporary raw alignment file
     os.remove(fname+"_raw")
+    # Output total runtime
     print("--- Runtime: %s seconds ---" % (time.time() - start_time))

@@ -1,3 +1,8 @@
+"""
+ Utility to generate attribute/relation triples, entity and relation ID maps,
+ reference alignment pairs, and supervised split files.
+"""
+
 import sklearn
 from sklearn.model_selection import train_test_split
 import os
@@ -6,11 +11,13 @@ import pickle
 import re
 from Param import *
 import sys
+
 orig_stdout = sys.stdout
+# Redirect all print output to out.txt for logging
 f = open('out.txt', 'w')
 sys.stdout = f
 
-# Check if the directory already exists
+# Create INPUT_DIR if it doesn’t already exist
 if not os.path.exists(INPUT_DIR):
     os.makedirs(INPUT_DIR)
 
@@ -18,6 +25,7 @@ def create_att_rel_triples_files(data_path):
     """Creates 4 distinct file (2 for each KG), _att_triples files contain
     attribute triples of the KGs while _rel_triples files contain relation triples.
     """
+    # Separate each triple into attribute vs. relation based on leading '<'
     att_triples = []
     rel_triples = []
     with open(data_path,"r",encoding="utf-8") as f:
@@ -45,6 +53,7 @@ def create_ent_id_files(fname):
     """Creates 2 files (1 for each KG) containing the KG entities, each of which
     assigned a unique ID.
     """
+    # Build a mapping from each entity URI to a unique integer ID
     count = 0
     for i in range(2):
         ent_dict = {}
@@ -74,6 +83,7 @@ def create_ent_id_files(fname):
 def create_ref_align():
     """Creates reference alignment file based on the unique IDs of entities.
     """
+    # Load entity→ID maps and assemble reference alignment ID pairs
     ent_dict_1 = {}
     with open(INPUT_DIR+"ent_ids_1", "r") as f:
         for line in f.readlines():
@@ -105,6 +115,7 @@ def create_sup_ref_pairs(fname):
     """Create train (for supervised learning) and test files by splitting the
     reference alignment
     """
+    # Read reference links and split into supervised vs. held-out sets
     pairs_list = []
     with open(fname, "r") as f:
         for line in f.readlines():
@@ -123,6 +134,7 @@ def create_sup_ref_pairs(fname):
 def create_rel_ids_files(fname):
     """Create files assigning unique IDs to relation properties in each KG.
     """
+    # Assign unique integer IDs to each relation predicate in both KGs
     rel_dict1 = {}
     count = 0
     with open(fname[0], "r") as f:
@@ -154,6 +166,7 @@ def create_rel_ids_files(fname):
 def create_id_triples(fname):
     """Create 2 files (1 for each KG) containing relation triples shown by IDs.
     """
+    # Convert subject/predicate/object URIs into their integer IDs
     for i in [1,2]:
         ent_dict = {}
         with open(INPUT_DIR+"ent_ids_"+str(i), "r") as f:
@@ -186,99 +199,8 @@ def create_id_triples(fname):
             for spo in spo_ids:
                 f.write(spo+'\n')
 
-def create_description_dict_pick_file():
-    """Creates a dictionary file of all entities in 2 datasets that "contains
-    all the text attribute values. We remove ^^ValueTypes if existed in text."
-    OR if HANDL_BLANK_NODE set to be True, it "Add desciption of blank nodes to
-    the nodes that has relation with".
-    """
-    desc_dict = {}
-    fnames = [DATASET+'_att_triples', 'en_att_triples']
-    if HANDL_BLANK_NODE==0:
-        for fname in fnames:
-            with open(PATH+fname, "r") as f:
-                for line in f.readlines():
-                    h, r, t = line.rstrip('\n').split(' ',2)
-                    h = h.strip('<>')
-                    t = re.findall('\"(.+)\"', t)
-
-                    if t:
-                        t = t[0]
-                        if h in desc_dict:
-                            if t not in desc_dict[h]:
-                                desc_dict[h] = desc_dict[h]+t+", "
-                        else:
-                            desc_dict[h] = t+", "
-
-    if HANDL_BLANK_NODE==1:
-        for fname in fnames:
-            with open(INPUT_DIR+fname, "r") as f:
-                for line in f.readlines():
-                    h, r, t = line.rstrip('\n').split(' ',2)
-                    h = h.strip('<>')
-                    t = re.findall('\"(.+)\"', t)
-                    if t:
-                        t = t[0]
-                        #print
-                        if h in desc_dict:
-                            if t not in desc_dict[h]:
-                                desc_dict[h] = desc_dict[h]+t+", "
-                        else:
-                            desc_dict[h] = t+", "
-
-        #Add blank keys to the dic that has relation with other blank nodes
-        for fname in fnames:
-            with open(INPUT_DIR+fname, "r") as f:
-                for line in f.readlines():
-                    h, r, t = line.rstrip('\n').split(' ',2)
-                    h = h.strip('<>')
-                    t = t.split()[0]
-                    if h[0]=="_" and t[0] == '_':
-                        if t in desc_dict:
-                            if h in desc_dict:
-                                if desc_dict[t] not in desc_dict[h]:
-                                    desc_dict[h] = desc_dict[h]+desc_dict[t]+", "
-                            else:
-                                desc_dict[h] = desc_dict[t]+", "
-
-        #Add desc of blank nodes to the nodes that has relation with them
-        for fname in fnames:
-            with open(INPUT_DIR+fname, "r") as f:
-                for line in f.readlines():
-                    h, r, t = line.rstrip('\n').split(' ',2)
-                    h = h.strip('<>')
-                    t = t.split()[0]
-                    if t[0] == '_':
-                        if t in desc_dict:
-                            if h in desc_dict:
-                                if desc_dict[t] not in desc_dict[h]:
-                                    desc_dict[h] = desc_dict[h]+desc_dict[t]+", "
-                            else:
-                                desc_dict[h] = desc_dict[t]+", "
-
-    #Remove lines that contain blank nodes
-    for fname in fnames:
-        not_blank_line = []
-        with open(INPUT_DIR+fname, "r") as f:
-            for line in f.readlines():
-                if "_:" not in line:
-                    not_blank_line.append(line)
-        with open(INPUT_DIR+fname, "w") as f:
-            for l in not_blank_line:
-                f.write(l)
-    blank_keys = []
-    for key in desc_dict.keys():
-        if key.startswith("_:"):
-            blank_keys.append(key)
-    for key in blank_keys:
-        desc_dict.pop(key, None) #Remove blank nodes from node list
-
-    print("Length of description dictionary:", len(desc_dict))
-    with open(INPUT_DIR+DICT_NAME, 'wb') as handle:
-        pickle.dump(desc_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    print("{} was created!".format(DICT_NAME))
-
 if __name__ == '__main__':
+    # Execute full pipeline: triples → IDs → alignments → splits
 
     PATH_DATA = './raw_files/'+DATASET
     print("----------------create attribute and relation triples files--------------------")
@@ -310,7 +232,7 @@ if __name__ == '__main__':
     os.rename(INPUT_DIR+DATASET+'_rel_triples_ids', INPUT_DIR+'triples_1')
     os.rename(INPUT_DIR+'en_rel_triples_ids', INPUT_DIR+'triples_2')
 
-    #print("----------------create description dictionary file--------------------")
-    #create_description_dict_pick_file()
+    # Restore console output
     sys.stdout = orig_stdout
+    # Close logging file
     f.close()

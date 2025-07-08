@@ -1,3 +1,8 @@
+"""
+Generate attribute/relation triples, entity & relation ID maps,
+reference alignments, and data splits for two KGs.
+"""
+
 import sklearn
 from sklearn.model_selection import train_test_split
 import os
@@ -10,9 +15,10 @@ import time
 import sys
 orig_stdout = sys.stdout
 f = open('out.txt', 'w')
+# Redirect all print output to out.txt for logging
 sys.stdout = f
 
-# Check if the directory already exists
+# Create INPUT_DIR if it doesn’t exist
 if not os.path.exists(INPUT_DIR):
     os.makedirs(INPUT_DIR)
 
@@ -28,9 +34,11 @@ def create_att_rel_triples_files(data_path):
         for line in f:
             l = line.rstrip('\n').split(' ',2)[-1]
             l0 = line.rstrip('\n').split(' ',2)[0]
+            # Attribute triple if object not a URI
             if l[0] != "<":
                 att_triples.append(line)
             else:
+                # Relation triple if subject not blank
                 if l0[0] != "_":
                     rel_triples.append(line)
 
@@ -50,6 +58,7 @@ def create_ent_id_files(fname):
     """Creates 2 files (1 for each KG) containing the KG entities, each of which
     assigned a unique ID.
     """
+    # Global counter for assigning unique entity IDs
     count = 0
     for i in range(2):
         ent_dict = {}
@@ -58,7 +67,8 @@ def create_ent_id_files(fname):
             for line in f.readlines():
                 h, r, t = line.rstrip('\n').split(' ',2)
                 head_tail = []
-                if not h.startswith('_:'): #ignore blank nodes
+                # Skip blank-node subjects
+                if not h.startswith('_:'):
                     h = h.strip('<>')
                     head_tail.append(h)
                     if t.startswith('<'):
@@ -86,6 +96,7 @@ def create_sup_ref_pairs(fname):
         for line in f.readlines():
             pairs_list.append(line)
 
+    # Split into sup_pairs and ref_pairs using TEST_REF_SIZE fraction
     pair_train, pair_test = train_test_split(pairs_list, test_size=TEST_REF_SIZE , random_state=42)
 
     with open(PATH+'sup_pairs', 'w') as f:
@@ -148,6 +159,7 @@ def create_id_triples(fname):
         spo_ids = []
         with open(fname[i-1], "r") as f:
             all_lines = f.readlines()
+            # Randomize triple order before mapping to IDs
             random.shuffle(all_lines)
             for line in all_lines:
                 h, r, t = line.rstrip('\n').split(' ',2)
@@ -168,6 +180,7 @@ def create_description_dict_pick_file():
     OR if HANDL_BLANK_NODE set to be True, it "Add desciption of blank nodes to
     the nodes that has relation with".
     """
+    # This dictionary of entity descriptions is serialized for input to the BERT-INT EA model
     desc_dict = {}
     fnames = ['attr_triples_1', 'attr_triples_2']
     if HANDL_BLANK_NODE==0:
@@ -269,8 +282,9 @@ def create_description_dict_pick_file():
 
 def cleanse_data():
     """Set delimiters in attribute/relation triples and the reference alignment
-    files to be tab(\t)
+    files to be tab(\t). 
     """
+    # Ensure all triples and ent_links use tab delimiters for downstream tools
     with open(INPUT_DIR+'ent_links', "r") as f:
         flag = True
         modified_ref = []
@@ -353,6 +367,7 @@ def create_ref_align():
             f.write(k+'\t'+v+'\n')
 
 if __name__ == '__main__':
+    # Run complete pipeline: split triples → map IDs → build alignments → assign relations → generate description dict → cleanse data
 
     print("----------------create attribute and relation triples files--------------------")
     for fname in [PATH_DATA+'_triples', PATH+'en_triples']:

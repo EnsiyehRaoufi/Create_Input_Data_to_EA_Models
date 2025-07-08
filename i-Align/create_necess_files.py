@@ -1,3 +1,7 @@
+"""
+Utility to generate attribute and relation triples, entity & relation ID mappings,
+reference alignment files, and prepare data for i-Align.
+"""
 import sklearn
 from sklearn.model_selection import train_test_split
 import os
@@ -9,12 +13,14 @@ from Param import *
 import sys
 orig_stdout = sys.stdout
 f = open('out.txt', 'w')
+# Redirect print output to out.txt for logging
 sys.stdout = f
 
 # Check if the directory already exists
 if not os.path.exists(INPUT_DIR):
     os.makedirs(INPUT_DIR)
-
+    
+# Path to raw Turtle/XML/NT files for this dataset
 PATH_DATA = './raw_files/'+DATASET
 
 def create_att_rel_triples_files(data_path):
@@ -27,7 +33,7 @@ def create_att_rel_triples_files(data_path):
         for line in f:
             l = line.rstrip('\n').split(' ',2)[-1]
             l0 = line.rstrip('\n').split(' ',2)[0]
-            if l[0] != "<":
+            if l[0] != "<": # Literal object indicates attribute triple; otherwise relation triple
                 if l[0] != "_" and l0[0]!='_': #If not blank node
                     att_triples.append(line)
             else:
@@ -49,6 +55,7 @@ def create_ent_id_files(fname):
     """Creates 2 files (1 for each KG) containing the KG entities, each of which
     assigned a unique ID.
     """
+    # Counter for assigning unique integer IDs to entities
     count = 0
     for i in range(2):
         ent_dict = {}
@@ -57,6 +64,7 @@ def create_ent_id_files(fname):
             for line in f.readlines():
                 h, r, t = line.rstrip('\n').split(' ',2)
                 head_tail = []
+                # Skip blank-node subjects
                 if not h.startswith('_:'):
                     h = h.strip('<>')
                     head_tail.append(h)
@@ -78,6 +86,7 @@ def create_ent_id_files(fname):
 def create_ref_align():
     """Creates reference alignment file based on the unique IDs of entities.
     """
+    # Map KG1 entity URLs to their assigned integer IDs
     ent_dict_1 = {}
     with open(PATH+"ent_ids_1", "r") as f:
         for line in f.readlines():
@@ -108,6 +117,7 @@ def create_ref_align():
 def create_rel_ids_files(fname):
     """Create files assigning unique IDs to relation properties in each KG.
     """
+    # Initialize mapping of KG1 relation URIs to unique IDs
     rel_dict1 = {}
     count = 0
     with open(fname[0], "r") as f:
@@ -136,7 +146,7 @@ def create_rel_ids_files(fname):
         for key in rel_dict2.keys():
             f.write(rel_dict2[key]+"\t"+key+"\n")
 
-if __name__ == '__main__':
+if __name__ == '__main__': # Execute full data‐preparation pipeline
 
     print("----------------create attribute and relation triples files--------------------")
     for fname in [PATH_DATA+'_triples', PATH+'en_triples']:
@@ -145,6 +155,7 @@ if __name__ == '__main__':
     print("----------------create entity id files--------------------")
     fname = [PATH_DATA+'_triples', PATH+'en_triples']
     create_ent_id_files(fname)
+    # Rename generated files to match i-Align input naming conventions
     os.rename(PATH+DATASET+'_triples_ids', PATH+'ent_ids_1')
     os.rename(PATH+'en_triples_ids', PATH+'ent_ids_2')
 
@@ -154,18 +165,23 @@ if __name__ == '__main__':
     print("----------------create relation id files--------------------")
     fname = [PATH_DATA+'_rel_triples', PATH+'en_rel_triples']
     create_rel_ids_files(fname)
+    # Rename generated files to match i-Align input naming conventions
     os.rename(PATH+DATASET+'_rel_triples_rel_ids', PATH+'rel_ids_1')
     os.rename(PATH+'en_rel_triples_rel_ids', PATH+'rel_ids_2')
 
-    #print("-------Copying relation triple files to MultiKE Input------------")
+    #print("-------Copying relation triple files to i-Align Input------------")
+    # Rename generated files to match i-Align input naming conventions
     os.rename(PATH+DATASET+'_rel_triples', PATH+'rel_triples_1')
     os.rename(PATH+'en_rel_triples', PATH+'rel_triples_2')
-    #print("-------Copying reference alignment file to MultiKE Input------------")
+    #print("-------Copying reference alignment file to i-Align Input------------")
     os.rename(PATH+'same_as', PATH+'ent_links')
 
-    #print("-------Renaming triple files to MultiKE Input------------")
+    #print("-------Renaming triple files to i-Align Input------------")
+    # Rename generated files to match i-Align input naming conventions
     os.rename(PATH+DATASET+'_att_triples', PATH+'attr_triples_1')
     os.rename(PATH+'en_att_triples', PATH+'attr_triples_2')
 
+    # Restore original stdout
     sys.stdout = orig_stdout
+    # Close the log file
     f.close()

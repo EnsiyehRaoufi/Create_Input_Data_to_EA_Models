@@ -1,3 +1,10 @@
+"""
+    Utility to build pickle files for IALIGN:
+    - Map attribute predicates to IDs
+    - Build entity and predicate vocabularies
+    - Generate seed/test splits of entity alignment
+    - Assemble KG entity and attribute feature dictionaries
+    """
 import os
 import re
 import string
@@ -7,14 +14,22 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from Param import *
 import sys
+
 orig_stdout = sys.stdout
 f = open('out.txt', 'w')
+# Redirect all print output to out.txt for easier debugging
 sys.stdout = f
 
 def attr_ids():
+     """
+        Read attribute triples for each KG and assign each unique predicate a new ID.
+        Outputs files attr_ids_1 and attr_ids_2 mapping ID→predicate URL.
+        """
+    # Loop over KG1 and KG2 to build predicate→ID maps
     for i in range(2):
         att_dict = {}
         count = 0
+        # Read attribute triples for KG i+1
         with open(PATH+'attr_triples_'+str(i+1), "r") as f:
             for line in f.readlines():
                 _, r, _ = line.rstrip('\n').split('\t',2)
@@ -22,6 +37,8 @@ def attr_ids():
                 if r not in att_dict:
                     att_dict[r] = count
                     count +=1
+
+        # Write predicate ID→URL mappings
         with open(PATH+"att_ids_"+str(i+1), "w") as f:
             for key in att_dict.keys():
                 f.write(str(att_dict[key])+"\t"+key+'\n')
@@ -63,6 +80,12 @@ def kg_pred_vocab():
         pickle.dump(preds, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 def kg_seed_test_data():
+    """
+    Map entity URLs from ent_ids files to integer IDs,
+    split aligned pairs into seed (30%) and test (70%) sets,
+    and serialize them as seed_data and test_data pickles.
+    """
+    # Map KG1 entity URLs to new integer IDs (+1)
     ent_dict_1 = {}
     with open(PATH+"ent_ids_1", "r") as f:
         for line in f.readlines():
@@ -71,6 +94,7 @@ def kg_seed_test_data():
             ent_url = ent_url.strip()
             ent_dict_1[ent_url] = int(ent_id)+1
 
+    # Map KG2 entity URLs to new integer IDs (+1)
     ent_dict_2 = {}
     with open(PATH+"ent_ids_2", "r") as f:
         for line in f.readlines():
@@ -80,16 +104,19 @@ def kg_seed_test_data():
             ent_dict_2[ent_url] = int(ent_id)+1
 
     pair_ent_ids = []
+    # Read reference alignment links
     with open(PATH+"ent_links", "r") as f:
             for line in f.readlines():
                 ent1, ent2 = line.split()
                 if ent1 in ent_dict_1:
                     pair_ent_ids.append([ent_dict_1[ent1], ent_dict_2[ent2]])
 
+    # 30% seed, 70% test
     seed, test_pairs = train_test_split(pair_ent_ids, test_size=0.7, shuffle=False)
     with open(INPUT_DIR+'seed_data', 'wb') as handle:
         pickle.dump(np.array(seed), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    # Randomize test pairs before saving
     random.shuffle(test_pairs)
     with open(INPUT_DIR+'test_data', 'wb') as handle:
         pickle.dump(np.array(test_pairs), handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -99,13 +126,15 @@ def kg_entities():
      contains max 4 tuples of (relation_id, entity_id)
     """
 
+    # Load predicate→ID vocab
     pred_ids = pickle.load(open(INPUT_DIR+'pred_vocab', "rb"))
     for i in range(2):
         entities = {}
         ent_ids = pickle.load(open(INPUT_DIR+'KG'+str(i+1)+'_ent_vocab', "rb"))
+        # Read relation triples for KG i+1
         with open(PATH+'rel_triples_'+str(i+1), "r") as f:
             rel_tri = f.readlines()
-        for tri in rel_tri:
+        for tri in rel_tri: # Collect up to 4 (predicate,entity) pairs per head entity
             h, r, t = tri.rstrip('\n').split('\t',2)
             if ent_ids[h] not in entities:
                 entities[ent_ids[h]] = [(pred_ids[r], ent_ids[t])]
@@ -113,17 +142,23 @@ def kg_entities():
                 if len(entities[ent_ids[h]])<5:
                  entities[ent_ids[h]].append((pred_ids[r], ent_ids[t]))
         for e in ent_ids:
-            if ent_ids[e] not in entities:
+            if ent_ids[e] not in entities: # Ensure every entity has at least 4 neighbor slots
                 entities[ent_ids[e]] = [(0, 0)]*4
         for e in entities:
             l = len(entities[e])
-            if l<4:
+            if l<4: # Pad shorter lists to length 4 with (0,0) tuples
                 for j in range(4-l):
                     entities[e].append((0,0))
         with open(INPUT_DIR+'KG'+str(i+1)+'_ENTITIES', 'wb') as handle:
             pickle.dump(entities, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 def kg_attributes():
+    """
+    Encode up to 10 characters per literal value as integer sequences,
+    pad to length 10, group up to 20 attributes per entity,
+    and serialize KG attribute feature dictionaries and updated char_vocab.
+    """
+    # Load existing character vocabulary
     pred_ids = pickle.load(open(INPUT_DIR+'pred_vocab', "rb"))
     char_ids = pickle.load(open(PATH+'char_vocab', "rb"))
     #find max id number in char_vocab to add more chars if necessary
@@ -135,16 +170,19 @@ def kg_attributes():
     for i in range(2):
         entities = {}
         ent_ids = pickle.load(open(INPUT_DIR+'KG'+str(i+1)+'_ent_vocab', "rb"))
+        # Read attribute triples for KG i+1
         with open(PATH+'attr_triples_'+str(i+1), "r") as f:
             rel_tri = f.readlines()
         for tri in rel_tri:
             h, r, t = tri.rstrip('\n').split('\t',2)
+            # Remove surrounding quotes from literal value
             t = t.strip('""')
 
             encoded_val = []
             count = 0
             for char in t:
-                if count<10:
+                # Encode up to first 10 characters of the literal
+                if count<10: # Pad shorter sequences to exactly 10 character IDs
                     if char in char_ids:
                         encoded_val.append(char_ids[char])
                     else:
@@ -158,6 +196,8 @@ def kg_attributes():
             if l<10:
                 for j in range(10-l):
                     encoded_val.append(0)
+
+            # Initialize attribute list for new entity
             if ent_ids[h] not in entities:
                 entities[ent_ids[h]] = [(pred_ids[r], encoded_val)]
             else:
@@ -180,6 +220,7 @@ def kg_attributes():
         with open(INPUT_DIR+'KG'+str(i+1)+'_ATTRIBUTES', 'wb') as handle:
             pickle.dump(entities, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    # Save updated character vocabulary
     with open(INPUT_DIR+'char_vocab', 'wb') as handle:
         pickle.dump(char_ids, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -187,6 +228,7 @@ def cleanse_data():
     """Set delimiters in attribute/relation triples and the reference alignment
     files to be tab(\t)
     """
+    # Normalize ent_links to tab-delimited format
     with open(PATH+'ent_links', "r") as f:
         flag = True
         modified_ref = []
@@ -203,6 +245,7 @@ def cleanse_data():
                 for tup in modified_ref:
                     f.write(tup[0]+'\t'+tup[1]+'\n')
     for i in range(2):
+        # Normalize attribute triples to tabs
         with open(PATH+'attr_triples_'+str(i+1), "r") as f:
             modified_tri = []
             flag = True
@@ -222,6 +265,7 @@ def cleanse_data():
                     for tri in modified_tri:
                         f.write(tri[0]+'\t'+tri[1]+'\t'+tri[2]+'\n')
 
+        # Normalize relation triples to tabs
         with open(PATH+'rel_triples_'+str(i+1), "r") as f:
             modified_tri = []
             for line in f.readlines():
@@ -239,6 +283,7 @@ def cleanse_data():
                         f.write(tri[0]+'\t'+tri[1]+'\t'+tri[2]+'\n')
 
 if __name__ == '__main__':
+     # Execute full pipeline: cleanse → attribute IDs → entity & predicate vocabs → seed/test → KG entities → KG attributes
 
     print("----------------cleanse data and remove <> from triples--------------------")
     cleanse_data()
@@ -254,5 +299,7 @@ if __name__ == '__main__':
     kg_entities()
     print("----------------creating KG attributes file--------------------")
     kg_attributes()
+    # Restore original console output
     sys.stdout = orig_stdout
+    # Close logging file out.txt
     f.close()

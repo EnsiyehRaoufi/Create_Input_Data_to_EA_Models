@@ -1,5 +1,11 @@
 # Create Input Files to the Entity Alignment Models from TTL/XML/NT Source and Target KGs
 
+📢 **Note**:  
+> For the latest updates and project-wide maintenance, please follow our project repository here:  
+> [DACE-DL/Create_Input_Data_to_EA_Models](https://github.com/DACE-DL/Create_Input_Data_to_EA_Models).  
+> All contents of this personal repository are fully mirrored in the project repository to ensure consistency.
+> This repository contains the original version of the code and remains valid for citation purposes. 
+
 📢 **Note**: The results of this work contributed to a Semantic Web Journal submission, available here:  
 [An Analysis of the Performance of Representation Learning Methods for Entity Alignment: Benchmark vs. Real-world Data](https://www.semantic-web-journal.net/content/analysis-performance-representation-learning-methods-entity-alignment-benchmark-vs-real-0)
 
